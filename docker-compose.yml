@@ -1,0 +1,33 @@
+services:
+  web:
+    build: .  # Aponta para o diretório atual onde deve estar o seu Dockerfile
+    container_name: kaizntree_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app  # Espelha seu código local no container (útil para desenvolvimento)
+    ports:
+      - "8000:8000"
+    environment:
+      # Variáveis de ambiente que o seu settings.py deve ler
+      - DB_HOST=db
+      - DB_NAME=inventory_db
+      - DB_USER=postgres
+      - DB_PASS=postgres
+    depends_on:
+      - db  # Diz ao Docker para subir o banco antes de tentar subir o back-end
+
+  db:
+    image: postgres:15-alpine
+    container_name: kaizntree_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
