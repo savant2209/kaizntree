@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
                     "default_unit",
                     models.CharField(
                         choices=[
-                            ("KG", "Kg"),
+                            ("KG", "kg"),
                             ("G", "g"),
                             ("L", "L"),
                             ("ML", "mL"),
@@ -182,7 +182,7 @@ class Migration(migrations.Migration):
                     "order_unit",
                     models.CharField(
                         choices=[
-                            ("KG", "Kg"),
+                            ("KG", "kg"),
                             ("G", "g"),
                             ("L", "L"),
                             ("ML", "mL"),
@@ -308,7 +308,7 @@ class Migration(migrations.Migration):
                     "order_unit",
                     models.CharField(
                         choices=[
-                            ("KG", "Kg"),
+                            ("KG", "kg"),
                             ("G", "g"),
                             ("L", "L"),
                             ("ML", "mL"),
@@ -340,7 +340,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="items",
-                        to="inventory.salesorders",
+                        to="inventory.salesorder",
                     ),
                 ),
             ],

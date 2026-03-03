@@ -39,7 +39,7 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrderItem
         fields = '__all__'
-        read_only_fields = ('id', 'user')
+        read_only_fields = ('id', 'user', 'quantity_received')
 
 
 class SalesOrdersSerializer(serializers.ModelSerializer):
@@ -53,7 +53,7 @@ class SalesOrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesOrderItem
         fields = '__all__'
-        read_only_fields = ('id', 'user')
+        read_only_fields = ('id', 'user', 'quantity_delivered')
 
 
 class StockSerializer(serializers.ModelSerializer):

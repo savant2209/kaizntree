@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:front": "npm run build && node scripts/deploy-frontend.mjs",
+    "deploy:back": "node scripts/deploy-backend-eb.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -23,16 +25,24 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@aws-sdk/client-cloudfront": "3.983.0",
+    "@aws-sdk/client-elastic-beanstalk": "3.983.0",
+    "@aws-sdk/client-s3": "3.983.0",
+    "@aws-sdk/credential-providers": "3.983.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "archiver": "^7.0.1",
+    "dotenv": "^17.3.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "glob": "^13.0.6",
     "globals": "^16.5.0",
+    "mime-types": "^3.0.2",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",

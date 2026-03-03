@@ -5,13 +5,13 @@ import { useNavigate } from 'react-router-dom';
 
 import type { ProductDTO } from '../../../shared/types/dto';
 import { PageError, PageLoading } from '../../../shared/ui/PageFeedback';
-import { currency, percent } from '../../../shared/utils/format';
+import { currency, percent, toNumber } from '../../../shared/utils/format';
 import { useCreateSalesOrderMutation, useSalesOrderFormQuery } from '../queries';
 
 type SalesItemForm = {
   product: string | null;
-  quantity: number;
-  unit_price: number;
+  quantity: number | string;
+  unit_price: number | string;
   order_unit: ProductDTO['default_unit'];
 };
 
@@ -21,6 +21,12 @@ export function NewSalesOrderPage() {
   const createMutation = useCreateSalesOrderMutation();
 
   const [customer, setCustomer] = useState<string | null>(null);
+  const [status, setStatus] = useState<'ORDER' | 'DELIVERED' | 'CANCELLED' | 'RETURNED'>('ORDER');
+  const [paymentStatus, setPaymentStatus] = useState<'UNPAID' | 'PAID' | 'REFUNDED'>('UNPAID');
+  const [expectedDelivery, setExpectedDelivery] = useState('');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [issueDate, setIssueDate] = useState('');
+  const [paymentDueDate, setPaymentDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<SalesItemForm[]>([
     { product: null, quantity: 1, unit_price: 0, order_unit: 'UN' },
@@ -36,12 +42,28 @@ export function NewSalesOrderPage() {
     setItems((current) => current.map((item, i) => (i === index ? { ...item, ...next } : item)));
   };
 
+  const handleProductChange = (index: number, productId: string | null) => {
+    if (!productId) {
+      updateItem(index, { product: null, unit_price: 0, order_unit: 'UN' });
+      return;
+    }
+
+    const selectedProduct = data.products.find((entry) => String(entry.id) === productId);
+    updateItem(index, {
+      product: productId,
+      unit_price: selectedProduct ? toNumber(selectedProduct.price) : 0,
+      order_unit: selectedProduct?.default_unit || 'UN',
+    });
+  };
+
   const itemFinancial = items.map((item) => {
     const productId = Number(item.product);
     const costData = data.averageCostByProduct[productId];
     const avgCost = costData && costData.totalQty > 0 ? costData.totalCost / costData.totalQty : 0;
-    const revenue = item.quantity * item.unit_price;
-    const cost = item.quantity * avgCost;
+    const quantity = toNumber(item.quantity);
+    const unitPrice = toNumber(item.unit_price);
+    const revenue = quantity * unitPrice;
+    const cost = quantity * avgCost;
     const profit = revenue - cost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
     return { avgCost, revenue, profit, margin };
@@ -51,16 +73,23 @@ export function NewSalesOrderPage() {
   const totalProfit = itemFinancial.reduce((sum, line) => sum + line.profit, 0);
 
   const handleSubmit = async () => {
-    const payloadItems = items.filter((item) => item.product && item.quantity > 0);
+    if (!customer) return;
+    const payloadItems = items.filter((item) => item.product && toNumber(item.quantity) > 0);
     if (payloadItems.length === 0) return;
 
     const order = await createMutation.mutateAsync({
       customer: customer ? Number(customer) : null,
+      status,
+      payment_status: paymentStatus,
+      expected_delivery: expectedDelivery || null,
+      invoice_number: invoiceNumber || null,
+      issue_date: issueDate || null,
+      payment_due_date: paymentDueDate || null,
       notes,
       items: payloadItems.map((item) => ({
         product: Number(item.product),
-        quantity: item.quantity,
-        unit_price: item.unit_price,
+        quantity: toNumber(item.quantity),
+        unit_price: toNumber(item.unit_price),
         order_unit: item.order_unit,
       })),
     });
@@ -77,40 +106,133 @@ export function NewSalesOrderPage() {
       <Stack>
         <Card withBorder>
           <Group grow>
-            <Select label="Customer" data={customerOptions} value={customer} onChange={setCustomer} clearable searchable />
-            <TextInput label="Notes" value={notes} onChange={(event) => setNotes(event.currentTarget.value)} />
+            <Select
+              label="Customer"
+              withAsterisk
+              placeholder="Select a customer"
+              data={customerOptions}
+              value={customer}
+              onChange={setCustomer}
+              allowDeselect={false}
+              searchable
+            />
+            <Select
+              label="Status"
+              withAsterisk
+              value={status}
+              onChange={(value) => setStatus((value as 'ORDER' | 'DELIVERED' | 'CANCELLED' | 'RETURNED') || 'ORDER')}
+              data={[
+                { value: 'ORDER', label: 'Ordered' },
+                { value: 'DELIVERED', label: 'Delivered' },
+                { value: 'CANCELLED', label: 'Cancelled' },
+                { value: 'RETURNED', label: 'Returned' },
+              ]}
+              allowDeselect={false}
+            />
+          </Group>
+
+          <Group grow mt="md">
+            <Select
+              label="Payment status"
+              withAsterisk
+              value={paymentStatus}
+              onChange={(value) => setPaymentStatus((value as 'UNPAID' | 'PAID' | 'REFUNDED') || 'UNPAID')}
+              data={[
+                { value: 'UNPAID', label: 'Unpaid' },
+                { value: 'PAID', label: 'Paid' },
+                { value: 'REFUNDED', label: 'Refunded' },
+              ]}
+              allowDeselect={false}
+            />
+            <TextInput
+              label="Expected delivery"
+              type="date"
+              placeholder="MM/DD/YYYY"
+              value={expectedDelivery}
+              onChange={(event) => setExpectedDelivery(event.currentTarget.value)}
+            />
+          </Group>
+
+          <Group grow mt="md">
+            <TextInput
+              label="Invoice number"
+              placeholder="e.g. INV-2001"
+              value={invoiceNumber}
+              onChange={(event) => setInvoiceNumber(event.currentTarget.value)}
+            />
+            <TextInput
+              label="Issue date"
+              type="date"
+              placeholder="MM/DD/YYYY"
+              value={issueDate}
+              onChange={(event) => setIssueDate(event.currentTarget.value)}
+            />
+          </Group>
+
+          <Group grow mt="md">
+            <TextInput
+              label="Payment due date"
+              type="date"
+              placeholder="MM/DD/YYYY"
+              value={paymentDueDate}
+              onChange={(event) => setPaymentDueDate(event.currentTarget.value)}
+            />
+            <TextInput
+              label="Notes"
+              placeholder="Add notes for this sales order"
+              value={notes}
+              onChange={(event) => setNotes(event.currentTarget.value)}
+            />
           </Group>
         </Card>
 
         <Card withBorder>
-          <Table striped>
+          <Table striped style={{ tableLayout: 'fixed' }}>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Product</Table.Th>
-                <Table.Th>Quantity</Table.Th>
-                <Table.Th>Unit price</Table.Th>
-                <Table.Th>Average cost</Table.Th>
-                <Table.Th>Subtotal</Table.Th>
-                <Table.Th>Item profit</Table.Th>
-                <Table.Th></Table.Th>
+                <Table.Th style={{ width: '24%' }}>Product</Table.Th>
+                <Table.Th style={{ width: '12%' }}>Quantity</Table.Th>
+                <Table.Th style={{ width: '14%' }}>Unit price</Table.Th>
+                <Table.Th style={{ width: '14%' }}>Average cost</Table.Th>
+                <Table.Th style={{ width: '14%' }}>Subtotal</Table.Th>
+                <Table.Th style={{ width: '18%' }}>Item profit</Table.Th>
+                <Table.Th style={{ width: '4%' }}></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {items.map((item, index) => (
                 <Table.Tr key={index}>
                   <Table.Td>
-                    <Select data={productOptions} value={item.product} onChange={(value) => updateItem(index, { product: value })} searchable />
-                  </Table.Td>
-                  <Table.Td>
-                    <NumberInput min={0} value={item.quantity} onChange={(value) => updateItem(index, { quantity: Number(value) || 0 })} />
+                    <Select
+                      data={productOptions}
+                      placeholder="Select a product"
+                      withAsterisk
+                      value={item.product}
+                      onChange={(value) => handleProductChange(index, value)}
+                      searchable
+                    />
                   </Table.Td>
                   <Table.Td>
                     <NumberInput
+                      withAsterisk
+                      min={0}
+                      decimalScale={3}
+                      thousandSeparator="," 
+                      decimalSeparator="."
+                      value={item.quantity}
+                      onChange={(value) => updateItem(index, { quantity: value })}
+                    />
+                  </Table.Td>
+                  <Table.Td>
+                    <NumberInput
+                      withAsterisk
                       min={0}
                       decimalScale={2}
-                      fixedDecimalScale
+                      thousandSeparator="," 
+                      decimalSeparator="."
+                      prefix="$ "
                       value={item.unit_price}
-                      onChange={(value) => updateItem(index, { unit_price: Number(value) || 0 })}
+                      onChange={(value) => updateItem(index, { unit_price: value })}
                     />
                   </Table.Td>
                   <Table.Td>{currency(itemFinancial[index].avgCost)}</Table.Td>
@@ -142,7 +264,7 @@ export function NewSalesOrderPage() {
         </Card>
 
         <Group justify="flex-end">
-          <Button onClick={handleSubmit} loading={createMutation.isPending}>
+          <Button onClick={handleSubmit} loading={createMutation.isPending} disabled={!customer}>
             Save SO
           </Button>
         </Group>

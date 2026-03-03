@@ -1,6 +1,7 @@
-import { AppShell, Button, Group, NavLink, Text } from '@mantine/core';
+import { AppShell, Button, NavLink, Text } from '@mantine/core';
 import {
   IconChartBar,
+  IconDatabase,
   IconLogout,
   IconPackage,
   IconReceipt,
@@ -22,6 +23,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: IconChartBar },
   { label: 'Products', path: '/products', icon: IconPackage },
+  { label: 'Stock', path: '/stocks', icon: IconDatabase },
   { label: 'Purchase Orders', path: '/purchase-orders', icon: IconTruck },
   { label: 'Sales Orders', path: '/sales-orders', icon: IconShoppingCart },
   { label: 'Customers', path: '/customers', icon: IconUsers },
@@ -34,10 +36,29 @@ export function AppLayout() {
   const { logout } = useAuth();
 
   return (
-    <AppShell header={{ height: 64 }} navbar={{ width: 280, breakpoint: 'sm' }} padding="md">
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Text fw={700}>KaiznTree Inventory</Text>
+    <AppShell navbar={{ width: 280, breakpoint: 'sm' }} padding="md">
+      <AppShell.Navbar p="sm">
+        <div className="h-full flex flex-col">
+          <Text fw={700} mb="md">
+            KaiznTree
+          </Text>
+
+          <div className="flex-1">
+            {navItems.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.path}
+                  label={item.label}
+                  leftSection={<Icon size={16} />}
+                  active={isActive}
+                  onClick={() => navigate(item.path)}
+                />
+              );
+            })}
+          </div>
+
           <Button
             variant="light"
             leftSection={<IconLogout size={16} />}
@@ -48,23 +69,7 @@ export function AppLayout() {
           >
             Logout
           </Button>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Navbar p="sm">
-        {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path);
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              label={item.label}
-              leftSection={<Icon size={16} />}
-              active={isActive}
-              onClick={() => navigate(item.path)}
-            />
-          );
-        })}
+        </div>
       </AppShell.Navbar>
 
       <AppShell.Main>

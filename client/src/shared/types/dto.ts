@@ -18,6 +18,7 @@ export interface StockDTO {
   user: ID;
   batch_number?: string | null;
   product: ID;
+  initial_quantity?: string | null;
   quantity: string;
   expiration_date?: string | null;
   source: 'MANUAL' | 'PO' | 'ADJUSTMENT';
@@ -69,6 +70,8 @@ export interface PurchaseOrderItemDTO {
   purchase_order: ID;
   product: ID;
   quantity: string;
+  quantity_received: string;
+  delivery_at?: string | null;
   order_unit: ProductDTO['default_unit'];
   unit_price: string;
 }
@@ -101,6 +104,7 @@ export interface SalesOrderDTO {
   expected_delivery?: string | null;
   last_updated: string;
   invoice_number?: string | null;
+  issue_date?: string | null;
   payment_due_date?: string | null;
   notes?: string | null;
 }
@@ -111,6 +115,8 @@ export interface SalesOrderItemDTO {
   sales_order: ID;
   product: ID;
   quantity: string;
+  quantity_delivered: string;
+  delivery_at?: string | null;
   order_unit: ProductDTO['default_unit'];
   unit_price: string;
 }
@@ -123,4 +129,10 @@ export interface LoginPayload {
 export interface LoginResponseDTO {
   access?: string;
   token?: string;
+}
+
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  confirm_password: string;
 }

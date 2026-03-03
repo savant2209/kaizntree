@@ -11,7 +11,7 @@ import {
   listSuppliers,
   updatePurchaseOrder,
 } from '../../shared/api/inventoryApi';
-import type { ProductDTO } from '../../shared/types/dto';
+import type { ProductDTO, PurchaseOrderDTO } from '../../shared/types/dto';
 
 const purchaseKeys = {
   orders: ['purchase-orders'] as const,
@@ -65,8 +65,10 @@ export function useCreatePurchaseOrderMutation() {
   return useMutation({
     mutationFn: async (payload: {
       supplier: number | null;
+      order_at?: string | null;
       expected_delivery?: string | null;
       payment_due_date?: string | null;
+      payment_status?: PurchaseOrderDTO['payment_status'];
       notes?: string;
       items: Array<{ product: number; quantity: number; unit_price: number; order_unit: ProductDTO['default_unit'] }>;
     }) => {
@@ -76,8 +78,10 @@ export function useCreatePurchaseOrderMutation() {
         supplier: payload.supplier,
         status: 'DRAFT',
         total_amount: totalAmount.toFixed(2),
+        order_at: payload.order_at || null,
         expected_delivery: payload.expected_delivery || null,
         payment_due_date: payload.payment_due_date || null,
+        payment_status: payload.payment_status || 'UNPAID',
         notes: payload.notes || '',
       });
 
@@ -114,11 +118,11 @@ export function useCreatePurchaseOrderMutation() {
   });
 }
 
-export function useUpdatePurchaseOrderStatusMutation(orderId: number) {
+export function useUpdatePurchaseOrderMutation(orderId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (status: 'RECEIVED' | 'CANCELLED') => updatePurchaseOrder(orderId, { status }),
+    mutationFn: (payload: Partial<PurchaseOrderDTO>) => updatePurchaseOrder(orderId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: purchaseKeys.orders });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(orderId) });

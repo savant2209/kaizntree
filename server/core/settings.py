@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from typing import Any
 import environ
 import os
 
@@ -25,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY') or env('SECRET_KEY')
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = ['*'] # TODO Para desenvolvimento local
 
@@ -79,9 +80,45 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': env.db()
-}
+database_url = os.getenv('DATABASE_URL', '')
+db_host = os.getenv('DB_HOST', '')
+
+if database_url:
+    DATABASES = {
+        'default': env.db('DATABASE_URL')
+    }
+elif db_host:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'kaizntree'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': db_host,
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+db_sslmode = os.getenv('DB_SSLMODE', '')
+db_sslrootcert = os.getenv('DB_SSLROOTCERT', '')
+db_options: dict[str, str] = {}
+
+if db_sslmode:
+    db_options['sslmode'] = db_sslmode
+
+if db_sslrootcert and os.path.exists(db_sslrootcert):
+    db_options['sslrootcert'] = db_sslrootcert
+
+if db_options:
+    DATABASES: dict[str, Any]
+    DATABASES['default']['OPTIONS'] = db_options
 
 
 # Password validation

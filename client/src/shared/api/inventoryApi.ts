@@ -10,6 +10,7 @@ import type {
   StockDTO,
   LoginPayload,
   LoginResponseDTO,
+  RegisterPayload,
 } from '../types/dto';
 
 const unwrapList = <T,>(payload: unknown): T[] => {
@@ -26,6 +27,10 @@ export const loginRequest = async (data: LoginPayload): Promise<string> => {
   const token = response.data.access || response.data.token;
   if (!token) throw new Error('Token was not found in login response');
   return token;
+};
+
+export const registerRequest = async (data: RegisterPayload): Promise<void> => {
+  await rootApiClient.post('/auth/register/', data);
 };
 
 export const listProducts = async (): Promise<ProductDTO[]> => {
@@ -46,6 +51,11 @@ export const updateProduct = async (id: number, payload: Partial<ProductDTO>): P
 export const listStocks = async (): Promise<StockDTO[]> => {
   const response = await apiClient.get('/stocks/');
   return unwrapList<StockDTO>(response.data);
+};
+
+export const createStock = async (payload: Partial<StockDTO>): Promise<StockDTO> => {
+  const response = await apiClient.post('/stocks/', payload);
+  return response.data as StockDTO;
 };
 
 export const listSuppliers = async (): Promise<SupplierDTO[]> => {
@@ -108,6 +118,19 @@ export const createPurchaseOrderItem = async (payload: Partial<PurchaseOrderItem
   return response.data as PurchaseOrderItemDTO;
 };
 
+export const receivePurchaseOrderItem = async (id: number, quantityReceived?: number): Promise<PurchaseOrderItemDTO> => {
+  const response = await apiClient.post(`/purchase-order-items/${id}/receive/`, quantityReceived ? { quantity_received: quantityReceived } : {});
+  return response.data as PurchaseOrderItemDTO;
+};
+
+export const receivePurchaseOrder = async (
+  id: number,
+  items?: Array<{ id: number; quantity_received: number }>,
+): Promise<PurchaseOrderDTO> => {
+  const response = await apiClient.post(`/purchase-orders/${id}/receive/`, items ? { items } : {});
+  return response.data as PurchaseOrderDTO;
+};
+
 export const listSalesOrders = async (): Promise<SalesOrderDTO[]> => {
   const response = await apiClient.get('/sales-orders/');
   return unwrapList<SalesOrderDTO>(response.data);
@@ -136,4 +159,17 @@ export const listSalesOrderItems = async (): Promise<SalesOrderItemDTO[]> => {
 export const createSalesOrderItem = async (payload: Partial<SalesOrderItemDTO>): Promise<SalesOrderItemDTO> => {
   const response = await apiClient.post('/sales-order-items/', payload);
   return response.data as SalesOrderItemDTO;
+};
+
+export const deliverSalesOrderItem = async (id: number, quantityDelivered?: number): Promise<SalesOrderItemDTO> => {
+  const response = await apiClient.post(`/sales-order-items/${id}/deliver/`, quantityDelivered ? { quantity_delivered: quantityDelivered } : {});
+  return response.data as SalesOrderItemDTO;
+};
+
+export const deliverSalesOrder = async (
+  id: number,
+  items?: Array<{ id: number; quantity_delivered: number }>,
+): Promise<SalesOrderDTO> => {
+  const response = await apiClient.post(`/sales-orders/${id}/deliver/`, items ? { items } : {});
+  return response.data as SalesOrderDTO;
 };

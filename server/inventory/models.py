@@ -1,10 +1,12 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction, models
 
 class Product(models.Model):
     UNIT_CHOICES = [
-        ('KG', 'Kg'),
+        ('KG', 'kg'),
         ('G', 'g'),
         ('L', 'L'),
         ('ML', 'mL'),
@@ -40,6 +42,7 @@ class Stock(models.Model):
 
     batch_number = models.CharField(max_length=100, blank=True, null=True)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='batches')
+    initial_quantity = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True) # original quantity registered for this batch
     quantity = models.DecimalField(max_digits=10, decimal_places=3) # remaining quantity in stock
     expiration_date = models.DateField(blank=True, null=True) # null if not perishable
 
@@ -47,6 +50,11 @@ class Stock(models.Model):
     purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_entries')
 
     created_at = models.DateTimeField(auto_now_add=True) # when the stock entry was created (e.g., when the batch was received)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.initial_quantity is None:
+            self.initial_quantity = self.quantity
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.product.name} - Qtd: {self.quantity}"
@@ -120,8 +128,8 @@ class PurchaseOrder(models.Model):
 
     # Timestamps to track the order lifecycle
     created_at = models.DateTimeField(auto_now_add=True)            # when the order is created (draft)
-    order_at = models.DateTimeField(blank=True, null=True)          # when the order is submitted to supplier
-    expected_delivery = models.DateTimeField(blank=True, null=True) # when the goods are expected to be delivered
+    order_at = models.DateField(blank=True, null=True)              # when the order is submitted to supplier
+    expected_delivery = models.DateField(blank=True, null=True)     # when the goods are expected to be delivered
     last_updated = models.DateTimeField(auto_now=True)              # when the order status is last updated
 
     # Finacial details
@@ -173,6 +181,9 @@ class PurchaseOrderItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
     order_unit = models.CharField(max_length=5, choices=Product.UNIT_CHOICES, default='UN')
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    delivery_at = models.DateField(blank=True, null=True) # when the item is expected to be delivered, can be different from order-level expected_delivery if needed
+    quantity_received = models.DecimalField(max_digits=10, decimal_places=3, default=Decimal('0.000')) # to track partial deliveries if needed
 
     def __str__(self):
         return f"{self.product.name} - Qtd: {self.quantity} {self.order_unit} @ {self.unit_price}"
@@ -231,12 +242,13 @@ class SalesOrder(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2) # snapshot of total amount at the time of order creation
 
     # Timestamps to track the order lifecycle
-    order_at = models.DateTimeField(auto_now_add=True)              # when the order is created
-    expected_delivery = models.DateTimeField(blank=True, null=True) # when the goods are expected to be delivered
+    order_at = models.DateField(auto_now_add=True)                  # when the order is created
+    expected_delivery = models.DateField(blank=True, null=True)     # when the goods are expected to be delivered
     last_updated = models.DateTimeField(auto_now=True)              # when the order status is last updated
 
     # Finacial details
     invoice_number = models.CharField(max_length=100, blank=True, null=True) # for received orders
+    issue_date = models.DateField(blank=True, null=True) # when the invoice was issued, typically same as order_at but can be different if needed
     payment_due_date = models.DateField(blank=True, null=True)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='UNPAID') 
     
@@ -285,6 +297,9 @@ class SalesOrderItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
     order_unit = models.CharField(max_length=5, choices=Product.UNIT_CHOICES, default='UN')
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    delivery_at = models.DateField(blank=True, null=True) # when the item is expected to be delivered, can be different from order-level expected_delivery if needed
+    quantity_delivered = models.DecimalField(max_digits=10, decimal_places=3, default=Decimal('0.000')) # to track partial deliveries if needed
 
     def __str__(self):
         return f"{self.product.name} - Qtd: {self.quantity} {self.order_unit} @ {self.unit_price}"

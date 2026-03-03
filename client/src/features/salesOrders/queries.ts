@@ -12,7 +12,7 @@ import {
   listSalesOrders,
   updateSalesOrder,
 } from '../../shared/api/inventoryApi';
-import type { ProductDTO } from '../../shared/types/dto';
+import type { ProductDTO, SalesOrderDTO } from '../../shared/types/dto';
 import { toNumber } from '../../shared/utils/format';
 
 const salesKeys = {
@@ -127,6 +127,12 @@ export function useCreateSalesOrderMutation() {
   return useMutation({
     mutationFn: async (payload: {
       customer: number | null;
+      status?: SalesOrderDTO['status'];
+      payment_status?: SalesOrderDTO['payment_status'];
+      expected_delivery?: string | null;
+      invoice_number?: string | null;
+      issue_date?: string | null;
+      payment_due_date?: string | null;
       notes?: string;
       items: Array<{ product: number; quantity: number; unit_price: number; order_unit: ProductDTO['default_unit'] }>;
     }) => {
@@ -134,8 +140,12 @@ export function useCreateSalesOrderMutation() {
 
       const order = await createSalesOrder({
         customer: payload.customer,
-        status: 'ORDER',
-        payment_status: 'UNPAID',
+        status: payload.status || 'ORDER',
+        payment_status: payload.payment_status || 'UNPAID',
+        expected_delivery: payload.expected_delivery || null,
+        invoice_number: payload.invoice_number || null,
+        issue_date: payload.issue_date || null,
+        payment_due_date: payload.payment_due_date || null,
         total_amount: totalAmount.toFixed(2),
         notes: payload.notes || '',
       });
@@ -165,11 +175,11 @@ export function useCreateSalesOrderMutation() {
   });
 }
 
-export function useUpdateSalesOrderStatusMutation(orderId: number) {
+export function useUpdateSalesOrderMutation(orderId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (status: 'DELIVERED' | 'CANCELLED') => updateSalesOrder(orderId, { status }),
+    mutationFn: (payload: Partial<SalesOrderDTO>) => updateSalesOrder(orderId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: salesKeys.orders });
       queryClient.invalidateQueries({ queryKey: salesKeys.detail(orderId) });

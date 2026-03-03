@@ -1,6 +1,6 @@
-import { Button, Card, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Anchor, Button, Card, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { useLoginMutation } from '../queries';
 import { useAuth } from '../../../shared/auth/AuthContext';
@@ -25,13 +25,15 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <Card shadow="sm" radius="md" p="lg" w={420}>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center px-4">
+      <Card shadow="md" withBorder radius="lg" p="xl" w={460}>
         <form onSubmit={handleSubmit}>
-          <Stack>
-            <Title order={2}>Sign in</Title>
-            <Text c="dimmed" size="sm">
-              Use your username (or email if configured) and password.
+          <Stack gap="md">
+            <Title order={2} ta="center">
+              Welcome back
+            </Title>
+            <Text c="dimmed" size="sm" ta="center">
+              Sign in with your username and password.
             </Text>
             <TextInput
               label="Username"
@@ -45,9 +47,20 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
             />
-            <Button type="submit" loading={loginMutation.isPending}>
+            <Button
+              type="submit"
+              loading={loginMutation.isPending}
+              fullWidth
+              justify="center"
+            >
               Sign in
             </Button>
+            <Text c="dimmed" size="sm" ta="center">
+              No account yet?{' '}
+              <Anchor component={Link} to="/register" size="sm">
+                Create one
+              </Anchor>
+            </Text>
           </Stack>
         </form>
       </Card>

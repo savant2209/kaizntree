@@ -8,6 +8,7 @@ import {
   NumberInput,
   Select,
   Stack,
+  Switch,
   Table,
   Text,
   TextInput,
@@ -17,16 +18,17 @@ import { useState } from 'react';
 
 import type { ProductDTO } from '../../../shared/types/dto';
 import { PageError, PageLoading } from '../../../shared/ui/PageFeedback';
-import { currency, percent, toNumber } from '../../../shared/utils/format';
+import { currency, formatQuantity, percent, toNumber } from '../../../shared/utils/format';
 import { useProductsFinancialQuery, useUpsertProductMutation } from '../queries';
 
 type ProductForm = {
   name: string;
   sku: string;
   category: string;
-  price: number;
+  price: number | string;
   default_unit: ProductDTO['default_unit'];
   description: string;
+  is_active: boolean;
 };
 
 const defaultForm: ProductForm = {
@@ -36,6 +38,7 @@ const defaultForm: ProductForm = {
   price: 0,
   default_unit: 'UN',
   description: '',
+  is_active: true,
 };
 
 export function ProductsPage() {
@@ -96,6 +99,7 @@ export function ProductsPage() {
       price: toNumber(product.price),
       default_unit: product.default_unit,
       description: product.description || '',
+      is_active: product.is_active,
     });
     setOpened(true);
   };
@@ -107,10 +111,10 @@ export function ProductsPage() {
         name: form.name,
         sku: form.sku,
         category: form.category,
-        price: form.price.toFixed(2),
+        price: toNumber(form.price).toFixed(2),
         default_unit: form.default_unit,
         description: form.description,
-        is_active: true,
+        is_active: form.is_active,
       },
     });
     setOpened(false);
@@ -153,6 +157,7 @@ export function ProductsPage() {
               <Table.Th>Current stock</Table.Th>
               <Table.Th>Unit profit</Table.Th>
               <Table.Th>Margin</Table.Th>
+              <Table.Th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Active</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -171,11 +176,12 @@ export function ProductsPage() {
                   <Table.Td>{product.sku}</Table.Td>
                   <Table.Td>{currency(salePrice)}</Table.Td>
                   <Table.Td>{currency(averageCost)}</Table.Td>
-                  <Table.Td>{(stockByProduct[product.id] || 0).toFixed(3)}</Table.Td>
+                  <Table.Td>{formatQuantity(stockByProduct[product.id] || 0)}</Table.Td>
                   <Table.Td>{currency(unitProfit)}</Table.Td>
                   <Table.Td>
                     <span className={unitMargin < 0 ? 'text-red-600 font-semibold' : ''}>{percent(unitMargin)}</span>
                   </Table.Td>
+                  <Table.Td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{product.is_active ? 'Yes' : 'No'}</Table.Td>
                 </Table.Tr>
               );
             })}
@@ -191,25 +197,42 @@ export function ProductsPage() {
         size="lg"
       >
         <Stack>
-          <TextInput label="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.currentTarget.value })} />
-          <TextInput label="SKU" value={form.sku} onChange={(event) => setForm({ ...form, sku: event.currentTarget.value })} />
+          <TextInput
+            label="Name"
+            placeholder="e.g. Whole Milk"
+            withAsterisk
+            value={form.name}
+            onChange={(event) => setForm({ ...form, name: event.currentTarget.value })}
+          />
+          <TextInput
+            label="SKU"
+            placeholder="e.g. MILK-BRAND-1L"
+            withAsterisk
+            value={form.sku}
+            onChange={(event) => setForm({ ...form, sku: event.currentTarget.value })}
+          />
           <TextInput
             label="Category"
+            placeholder="e.g. Dairy"
+            withAsterisk
             value={form.category}
             onChange={(event) => setForm({ ...form, category: event.currentTarget.value })}
           />
           <NumberInput
             label="Sale price"
+            placeholder="0.00"
+            withAsterisk
             min={0}
             decimalScale={2}
-            fixedDecimalScale
             value={form.price}
-            onChange={(value) => setForm({ ...form, price: Number(value) || 0 })}
+            onChange={(value) => setForm({ ...form, price: value })}
           />
           <Select
             label="Unit"
+            placeholder="Select a unit"
+            withAsterisk
             data={[
-              { value: 'KG', label: 'Kg' },
+              { value: 'KG', label: 'kg' },
               { value: 'G', label: 'g' },
               { value: 'L', label: 'L' },
               { value: 'ML', label: 'mL' },
@@ -220,8 +243,14 @@ export function ProductsPage() {
           />
           <TextInput
             label="Description"
+            placeholder="Short description"
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.currentTarget.value })}
+          />
+          <Switch
+            label="Active"
+            checked={form.is_active}
+            onChange={(event) => setForm({ ...form, is_active: event.currentTarget.checked })}
           />
 
           {selected && (
