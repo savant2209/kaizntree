@@ -99,6 +99,19 @@ Core capabilities implemented:
 - Node.js 20+
 - PostgreSQL (optional for local; SQLite also supported)
 
+### Deployment Prerequisites (AWS)
+
+- Terraform 1.5+
+- AWS CLI v2
+- Authenticated AWS profile (SSO or static credentials)
+
+Example (SSO):
+
+```bash
+aws configure sso
+aws sso login --profile <your-profile>
+```
+
 ### Backend
 
 ```bash
