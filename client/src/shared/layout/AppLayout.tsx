@@ -40,7 +40,7 @@ export function AppLayout() {
       <AppShell.Navbar p="sm">
         <div className="h-full flex flex-col">
           <Text fw={700} mb="md">
-            KaiznTree
+            Kaizntree
           </Text>
 
           <div className="flex-1">

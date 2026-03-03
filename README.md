@@ -25,18 +25,24 @@ Core capabilities implemented:
 
 - **REST-first API** with DRF `ModelViewSet` for consistent CRUD behavior.
 - **JWT authentication** via `djangorestframework-simplejwt`.
+- **Custom user model (`AUTH_USER_MODEL`)** to keep the domain ready for future identity federation fields (e.g., `cognito_sub`).
+- **Simple account bootstrap for challenge scope**: registration uses username + password with minimal validation to reduce onboarding friction.
 - **Multi-tenant isolation at app level**: every core entity is linked to `user`, and querysets are filtered by authenticated user.
+- **Soft-delete strategy on master data** (`Product`, `Supplier`, `Customer`) using `is_active` to preserve historical references and relational integrity.
 - **Transactional stock operations**:
   - Purchase receiving creates `Stock` entries and increments `quantity_received`.
   - Sales delivery consumes stock using **FEFO and FIFO strategy** (earliest expiration first, then creation order).
   - Critical flows use `transaction.atomic()` + `select_for_update()` to avoid race conditions.
 - **Order number generation** with per-user, per-month sequence counters (`PO-YYMM-XXXX`, `SO-YYMM-XXXXXX`).
+- **Dedicated sequence-counter tables** (`SequenceCounterPO`, `SequenceCounterSO`) to avoid concurrent numbering conflicts and keep deterministic ordering under simultaneous requests.
+- **Line-level financial snapshot**: each order item stores `unit_price` so historical documents remain correct even if product price changes later.
 
 ### Frontend (React + TypeScript)
 
 - **Feature-based organization** (`src/features/...`) to keep each domain isolated.
 - **React Query** for server-state caching, loading/error handling, and mutation workflows.
 - **Centralized API client** in shared layer (`src/shared/api`) to standardize request/auth behavior.
+- **Stock UX split into three tabs** (`Current Stock`, `Entries`, `Exits`) based on common operational workflows to speed up daily inventory tasks.
 
 ### Infrastructure (Terraform)
 
@@ -180,6 +186,8 @@ Summary:
 - Users only access their own entities (products, orders, stock, suppliers, customers, etc.).
 - Stock decreases only through delivery flows and follows FIFO by expiration date.
 - Receiving purchase orders creates stock batches (`source = PO`).
+- Purchase order items support partial receiving through `quantity_received`; an item is considered fully received when `quantity_received == quantity`.
+- Sales and purchase item `unit_price` values are snapshots at transaction time and are not backfilled when catalog prices change.
 - Order statuses can be advanced through dedicated actions and/or partial updates.
 
 ## 7) Deployment Notes
