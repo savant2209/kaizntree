@@ -28,7 +28,7 @@ Core capabilities implemented:
 - **Multi-tenant isolation at app level**: every core entity is linked to `user`, and querysets are filtered by authenticated user.
 - **Transactional stock operations**:
   - Purchase receiving creates `Stock` entries and increments `quantity_received`.
-  - Sales delivery consumes stock using **FIFO strategy** (earliest expiration first, then creation order).
+  - Sales delivery consumes stock using **FEFO and FIFO strategy** (earliest expiration first, then creation order).
   - Critical flows use `transaction.atomic()` + `select_for_update()` to avoid race conditions.
 - **Order number generation** with per-user, per-month sequence counters (`PO-YYMM-XXXX`, `SO-YYMM-XXXXXX`).
 
@@ -44,34 +44,51 @@ Core capabilities implemented:
   - Elastic Beanstalk for backend hosting
   - RDS PostgreSQL for persistent data
   - S3 + CloudFront for frontend static hosting
+- VPC, ALB, Lambdas, Cognito and Secrets Manager were not used for simplification and cost optimization purposes.
 - Infrastructure resources are versioned as code in `infrastructure/`.
 
 ## 3) High-Level Diagram
 
-```mermaid
-flowchart LR
-  U[User] --> F[Frontend - React/Vite]
-  F -->|JWT Bearer| B[Backend API - Django/DRF]
-  B --> D[(PostgreSQL)]
-
-  subgraph API Domains
-    A1[Auth]
-    A2[Inventory]
-  end
-
-  B --> A1
-  B --> A2
-
-  subgraph Inventory Logic
-    L1[Purchase Receive]
-    L2[Sales Deliver FIFO]
-    L3[Stock Entries/Batches]
-  end
-
-  A2 --> L1
-  A2 --> L2
-  L1 --> L3
-  L2 --> L3
+```
+[ CAMADA DE ACESSO ]
+      |
+      V
++---------------------------+       (DNS & SSL)
+|   Route 53 + AWS ACM      | ----> HTTPS Seguro
++---------------------------+
+      |
+      V
++---------------------------+       (Interface)
+|    Frontend (React)       | ----> Armazena JWT no Browser
++---------------------------+
+      |
+      | Request + Bearer Token
+      V
++---------------------------+       (Backend API)
+|    Django Rest (DRF)      |
++-------------+-------------+
+              |
+      /-------+-------\
+      |               |
+[ API Auth ]    [ API Inventory ]
+      |               |
+      |               V
+      |     +-----------------------+
+      |     |    Inventory Logic    |
+      |     | (Services / Selectors)|
+      |     +----------+------------+
+      |                |
+      |      /---------+---------\
+      |      |                   |
+      |   [ FEFO ]        [ Batch Mgmt ]
+      | (Exp. Date)      (Stock Entries)
+      |      |                   |
+      \------+---------+---------/
+                     |
+                     V
+            +-----------------+
+            |   PostgreSQL    |
+            +-----------------+
 ```
 
 ## 4) Local Setup

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { useLoginMutation } from '../queries';
-import { useAuth } from '../../../shared/auth/AuthContext';
+import { useAuth } from '../../../shared/auth/useAuth';
 
 export function LoginPage() {
   const navigate = useNavigate();

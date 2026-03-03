@@ -12,7 +12,7 @@ import {
 import type { ComponentType } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 
 type NavItem = {
   label: string;

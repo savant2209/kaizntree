@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { useRegisterMutation } from '../queries';
-import { useAuth } from '../../../shared/auth/AuthContext';
+import { useAuth } from '../../../shared/auth/useAuth';
 
 const normalizeError = (value: unknown): string | null => {
   if (typeof value === 'string') {

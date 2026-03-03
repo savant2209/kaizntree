@@ -16,6 +16,7 @@ import { lookup } from 'mime-types';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
+dotenv.config({ path: path.resolve(process.cwd(), '.env.deploy') });
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,15 +25,26 @@ const CLIENT_DIR = path.resolve(__dirname, '..');
 const INFRA_DIR = path.resolve(CLIENT_DIR, '../infrastructure');
 const BUILD_DIR = path.resolve(CLIENT_DIR, 'dist');
 
-function readTerraformOutput(outputName) {
+function readTerraformOutputs() {
   try {
-    return execSync(`terraform output -raw ${outputName}`, {
+    const raw = execSync('terraform output -json', {
       cwd: INFRA_DIR,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
+
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw);
+    const result = {};
+
+    for (const [key, value] of Object.entries(parsed)) {
+      result[key] = value?.value;
+    }
+
+    return result;
   } catch {
-    return '';
+    return {};
   }
 }
 
@@ -48,11 +60,11 @@ function readTfvarsValue(key) {
   }
 }
 
-const BUCKET = readTerraformOutput('frontend_bucket_name') || process.env.S3_BUCKET_CLOUDFRONT || '';
-const DISTRIBUTION_ID =
-  readTerraformOutput('cloudfront_distribution_id') || process.env.CLOUDFRONT_DISTRIBUTION_ID || '';
+const terraformOutputs = readTerraformOutputs();
+const BUCKET = terraformOutputs.frontend_bucket_name || process.env.S3_BUCKET_CLOUDFRONT || '';
+const DISTRIBUTION_ID = terraformOutputs.cloudfront_distribution_id || process.env.CLOUDFRONT_DISTRIBUTION_ID || '';
 const REGION = process.env.AWS_REGION || 'us-east-1';
-const AWS_PROFILE = process.env.AWS_PROFILE || readTfvarsValue('aws_profile') || '';
+const AWS_PROFILE = process.env.AWS_PROFILE || process.env.AWS_DEFAULT_PROFILE || readTfvarsValue('aws_profile') || '';
 
 if (!BUCKET || !DISTRIBUTION_ID) {
   console.error('[ERROR] Missing deployment target values.');
@@ -174,6 +186,11 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (String(error?.message || '').includes('Could not load credentials from any providers')) {
+    console.error('[ERROR] AWS credentials are not configured for this machine/session.');
+    console.error('[HINT] Set AWS_PROFILE (or AWS_DEFAULT_PROFILE) and login with SSO:');
+    console.error('[HINT] aws sso login --profile <your-profile>');
+  }
   console.error('[ERROR] Frontend deploy failed:', error.message);
   process.exit(1);
 });

@@ -1,4 +1,6 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+
+import { AuthContext, type AuthContextType } from './auth-context';
 
 const normalizeStoredToken = (value: string | null): string | null => {
   if (!value) return null;
@@ -6,15 +8,6 @@ const normalizeStoredToken = (value: string | null): string | null => {
   if (!normalized || normalized === 'null' || normalized === 'undefined') return null;
   return normalized;
 };
-
-type AuthContextType = {
-  token: string | null;
-  isAuthenticated: boolean;
-  login: (token: string) => void;
-  logout: () => void;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => normalizeStoredToken(localStorage.getItem('access_token')));
@@ -43,12 +36,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider');
-  }
-  return context;
 }
